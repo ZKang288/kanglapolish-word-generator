@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanglapolish Word Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #31333f;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #ff4b4b;
+            background-color: #ffffff;
+        }
+        button {
+            background-color: #ff4b4b;
+            color: white;
+            border: 1px solid #ff4b4b;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 10px;
+            transition: background-color 0.1s ease;
+        }
+        button:hover {
+            background-color: #e03e3e;
+            border-color: #e03e3e;
+        }
+        .download-btn {
+            background-color: transparent;
+            color: #ff4b4b;
+            border: 1px solid #ff4b4b;
+            display: none;
+        }
+        .download-btn:hover {
+            background-color: #ff4b4b;
+            color: white;
+        }
+        .results {
+            margin-top: 1.5rem;
+            line-height: 1.6;
+        }
+        .word-item {
+            font-size: 1.05rem;
+            margin-bottom: 0.4rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📝 Kanglapolish Word Generator</h1>
+
+    <div class="form-group">
+        <label for="numWords">How many words to generate?</label>
+        <input type="number" id="numWords" min="1" max="50" value="5">
+    </div>
+
+    <button id="generateBtn">Generate</button>
+    <button id="downloadBtn" class="download-btn">💾 Download Results</button>
+
+    <div id="resultsContainer" class="results"></div>
+
+    <script>
+        // === Phonetic rules ===
+        const vowels = ['a', 'e', 'i', 'o', 'u', 'ou', 'ü'];
+        const complex_vowels = ['ae', 'ai','ao','ie','eo','iu','ei','oi','ui','uai'];
+        const consonants = ['b', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'th','z','y'];
+        const complex_consonants = ['zh', 'czh', 'ch','sh'];
+        const end_consonants = ['m','n','ng','k','t'];
+
+        // === Kangpatsa translation ===
+        function kangpatsa(message) {
+            const translation = {
+                "b": 'ᥙ', 'p': 'ᥚ', 'd': 'ဒ', 'k': 'ᥐ', 'g': 'ᥠ', 'h': 'ᥑ',
+                'ng': 'ᥒ', 't': 'ᥖ', 'th': 'ᥗ', 'f': 'ဖ', 'l': 'ᥘ', 'r': 'ລ',
+                'm': 'ᥛ', 'n': 'ᥢ', 'z': 'ဈ', 'zh': 'ဈ', 'czh': 'ᥔ', 'c': 'ᥟ',
+                'ch': 'ᥡ', 's': 'ᥞ', 'sh': 'ဆ', 'j': 'စ', 'y': 'ᥕ', 'a': 'ᥣ',
+                'ai': 'ᥭ', 'ao': 'ᥝ', 'i': 'ᥤ', 'ü': 'ᥪ', 'ie': 'ᥬ', 'io': 'ᥬᥩ',
+                'eo': 'ᥬᥩ', 'iu': 'ᥤᥝ', 'e': 'ᥫ', 'ei': 'ᥥ', 'ae': 'ᥦ', 'ou': 'ᥩ',
+                'o': 'ᥨ', 'oi': 'ᥨᥭ', 'u': 'ᥧ', 'ui': 'ᥧᥤ', 'uai': 'ᥧᥭ', "'": "-"
+            };
+            let result = "";
+            let i = 0;
+            while (i < message.length) {
+                if (i < message.length - 2 && translation[message.substring(i, i + 3)]) {
+                    result += translation[message.substring(i, i + 3)];
+                    i += 3;
+                } else if (i < message.length - 1 && translation[message.substring(i, i + 2)]) {
+                    result += translation[message.substring(i, i + 2)];
+                    i += 2;
+                } else {
+                    result += translation[message.charAt(i)] || message.charAt(i);
+                    i += 1;
+                }
+            }
+            return result;
+        }
+
+        const choice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        // === Word generator ===
+        function generateSyllable() {
+            const patterns = [
+                () => choice(vowels) + choice(end_consonants),
+                () => choice(consonants) + choice(vowels) + choice(end_consonants),
+                () => choice(consonants) + choice(complex_vowels) + choice(end_consonants),
+                () => choice(consonants) + choice(vowels),
+                () => choice(consonants) + choice(complex_vowels),
+                () => choice(complex_consonants) + choice(vowels) + choice(end_consonants),
+                () => choice(complex_consonants) + choice(complex_vowels),
+            ];
+            return choice(patterns)();
+        }
+
+        function generateWord() {
+            const syllableCount = Math.floor(Math.random() * 3) + 2; // matches random.randint(2, 4)
+            let word = '';
+            for (let i = 0; i < syllableCount; i++) {
+                word += generateSyllable();
+            }
+            const capitalized = word.charAt(0).toUpperCase() + word.slice(1);
+            return { romanized: capitalized, script: kangpatsa(word) };
+        }
+
+        // Keep track of the current active list for downloading
+        let currentResults = [];
+
+        // DOM Setup
+        const numWordsInput = document.getElementById('numWords');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        generateBtn.addEventListener('click', () => {
+            const count = Math.min(Math.max(parseInt(numWordsInput.value) || 5, 1), 50);
+            numWordsInput.value = count; // Clamp value visually between 1 and 50
+            
+            currentResults = [];
+            resultsContainer.innerHTML = '';
+            
+            for (let i = 0; i < count; i++) {
+                currentResults.push(generateWord());
+            }
+
+            currentResults.forEach(res => {
+                const div = document.createElement('div');
+                div.className = 'word-item';
+                div.innerHTML = `<strong>${res.romanized}</strong> → ${res.script}`;
+                resultsContainer.appendChild(div);
+            });
+
+            downloadBtn.style.display = 'inline-block';
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (currentResults.length === 0) return;
+            
+            let textContent = "";
+            currentResults.forEach(res => {
+                textContent += `${res.romanized} → ${res.script}\n`;
+            });
+
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            // Format timestamp: YYYYMMDD_HHMMSS
+            const now = new Date();
+            const timestamp = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') + "_" +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0') +
+                String(now.getSeconds()).padStart(2, '0');
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kanglapolish_${timestamp}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
