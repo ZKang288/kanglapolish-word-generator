@@ -134,7 +134,7 @@
 
     <div class="form-group" style="margin-bottom: 16px;">
         <label for="inputText">Input Syllables / Words:</label>
-        <textarea id="inputText" placeholder="Type or paste text here (e.g., si1, hung1, si2)..."></textarea>
+        <textarea id="inputText" placeholder="Type or paste text here (e.g., si1, hung1, he5)..."></textarea>
     </div>
 
     <button id="transcribeBtn">Transcribe</button>
@@ -187,7 +187,7 @@
                     <td>陽平 (light flat)</td>
                     <td>65</td>
                     <td>5</td>
-                    <td>â, sı̃, hôn</td>
+                    <td>â, sı̃, hôn (e.g. eu / e)</td>
                 </tr>
                 <tr>
                     <td>陽上 (light rising)</td>
@@ -213,22 +213,16 @@
 </div>
 
 <script>
-    // --- Mapping Rules (Mapped against Revised Peng'im as central pivot) ---
-    const consonants = {
-        'b':  ['b',  'b',  'b',  'b'],
-        'p':  ['pʰ', 'ph', 'p',  'p'],
-        'm':  ['m',  'm',  'm',  'm'],
-        'd':  ['t',  't',  'd',  'd'],
-        't':  ['tʰ', 'th', 't',  't'],
-        'n':  ['n',  'n',  'n',  'n'],
-        'g':  ['k',  'k',  'g',  'g'],
-        'k':  ['kʰ', 'kh', 'k',  'k'],
-        'ng': ['ŋ',  'ng', 'ng', 'ng'],
-        'z':  ['ts', 'ch', 'z',  'z'],
-        'c':  ['tsʰ','chh','c',  'c'],
-        's':  ['s',  's',  's',  's'],
-        'h':  ['h',  'h',  'h',  'h']
-    };
+    // === Vowel Mappings ===
+    // Peng'im: 'e' -> Revised: 'eu'
+    // Peng'im: 'ê' -> Revised: 'e'
+    function convertVowelsToRevised(str) {
+        return str.replace(/ê/g, 'e').replace(/\be\b/g, 'eu').replace(/e(?![u])/g, 'eu');
+    }
+
+    function convertVowelsFromRevised(str) {
+        return str.replace(/eu/g, 'e').replace(/\be\b/g, 'ê');
+    }
 
     const toneMarkers = {
         1: { revisedDiacritic: '' },
@@ -256,26 +250,30 @@
         let base = cleanToken;
         if (src === tgt) return token;
 
-        // Convert Peng'im numeric notation to Revised diacritics
-        if (src === 'Pengim' && tgt === 'Revised' && toneNum) {
-            let vowels = ['a','e','i','o','u'];
-            let targetVowelIdx = -1;
-            
-            for (let i = 0; i < base.length; i++) {
-                if (vowels.includes(base[i].toLowerCase())) {
-                    targetVowelIdx = i;
-                    break;
-                }
-            }
+        // Convert Peng'im to Revised Peng'im
+        if (src === 'Pengim' && tgt === 'Revised') {
+            base = convertVowelsToRevised(base);
 
-            if (targetVowelIdx !== -1 && toneMarkers[toneNum] && toneMarkers[toneNum].revisedDiacritic) {
-                const mark = toneMarkers[toneNum].revisedDiacritic;
-                base = base.slice(0, targetVowelIdx + 1) + mark + base.slice(targetVowelIdx + 1);
+            if (toneNum) {
+                let vowels = ['a','e','i','o','u','eu'];
+                let targetVowelIdx = -1;
+                
+                for (let i = 0; i < base.length; i++) {
+                    if (vowels.includes(base[i].toLowerCase())) {
+                        targetVowelIdx = i;
+                        break;
+                    }
+                }
+
+                if (targetVowelIdx !== -1 && toneMarkers[toneNum] && toneMarkers[toneNum].revisedDiacritic) {
+                    const mark = toneMarkers[toneNum].revisedDiacritic;
+                    base = base.slice(0, targetVowelIdx + 1) + mark + base.slice(targetVowelIdx + 1);
+                }
             }
             return base.normalize('NFC');
         }
 
-        // Convert Revised diacritics to numeric Peng'im
+        // Convert Revised Peng'im back to Peng'im
         if (src === 'Revised' && tgt === 'Pengim') {
             let extractedTone = '';
             if (base.includes('\u0301')) extractedTone = '2';
@@ -284,6 +282,8 @@
             else if (base.includes('\u0304')) extractedTone = '7';
 
             let stripped = base.replace(/[\u0300-\u036f]/g, "");
+            stripped = convertVowelsFromRevised(stripped);
+
             return stripped + extractedTone;
         }
 
