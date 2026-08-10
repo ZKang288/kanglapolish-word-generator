@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hengji Phonetic Transcriber</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f7f9fb;
+            color: #2c3e50;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 24px;
+        }
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        h1, h2 {
+            margin-top: 0;
+            color: #1a252f;
+        }
+        h1 { font-size: 1.8rem; }
+        h2 { font-size: 1.3rem; margin-bottom: 12px; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        select, textarea {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .output-box {
+            margin-top: 20px;
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 6px;
+            min-height: 50px;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🔤 Hengji Script Transcriber</h1>
+    
+    <div class="grid">
+        <div class="form-group">
+            <label for="sourceScheme">Source System:</label>
+            <select id="sourceScheme">
+                <option value="IPA">IPA</option>
+                <option value="Kadotu">Ka-do-tu</option>
+                <option value="Pengim" selected>Hengji Peng'im</option>
+                <option value="Revised">Revised Peng'im</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetScheme">Target System:</label>
+            <select id="targetScheme">
+                <option value="IPA">IPA</option>
+                <option value="Kadotu">Ka-do-tu</option>
+                <option value="Pengim">Hengji Peng'im</option>
+                <option value="Revised" selected>Revised Peng'im</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 16px;">
+        <label for="inputText">Input Syllables / Words:</label>
+        <textarea id="inputText" placeholder="Type or paste Hengji text here (e.g., di1, di2, dit7, dit8)..."></textarea>
+    </div>
+
+    <button id="transcribeBtn">Transcribe</button>
+
+    <div class="form-group" style="margin-top: 20px;">
+        <label>Result:</label>
+        <div id="outputText" class="output-box"></div>
+    </div>
+</div>
+
+<!-- Hengji Tone Reference Table -->
+<div class="card">
+    <h2>📖 Hengji Tone & Orthography Guide</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tone Name</th>
+                    <th>Contour</th>
+                    <th>Peng'im Symbol</th>
+                    <th>Revised Peng'im Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>陰平 (Dark Flat)</td>
+                    <td>(24)</td>
+                    <td>1</td>
+                    <td>di (诗)</td>
+                </tr>
+                <tr>
+                    <td>陽平 (Light Flat)</td>
+                    <td>(21)</td>
+                    <td>2</td>
+                    <td>dī (时)</td>
+                </tr>
+                <tr>
+                    <td>陰上 / 網上 (Dark Rising)</td>
+                    <td>(211)</td>
+                    <td>3</td>
+                    <td>dì (死)</td>
+                </tr>
+                <tr>
+                    <td>陰去 (Dark Departing)</td>
+                    <td>(35)</td>
+                    <td>4</td>
+                    <td>dí</td>
+                </tr>
+                <tr>
+                    <td>陽去 (Light Departing)</td>
+                    <td>(33)</td>
+                    <td>5</td>
+                    <td>dî</td>
+                </tr>
+                <tr>
+                    <td>陰入 (Dark Entering)</td>
+                    <td>(5)</td>
+                    <td>6</td>
+                    <td>dìt (视)</td>
+                </tr>
+                <tr>
+                    <td>陽入 (Light Entering)</td>
+                    <td>(3)</td>
+                    <td>7</td>
+                    <td>dit, ap, ep, ip (夫) [Unmarked coda]</td>
+                </tr>
+                <tr>
+                    <td>長入 (Long Entering)</td>
+                    <td>(55)</td>
+                    <td>8 / B</td>
+                    <td>dít, áp, ép, íp (实) [Acute coda]</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Diacritic maps for Hengji Revised Peng'im tones
+    const toneMarkers = {
+        1: { revisedDiacritic: '' },
+        2: { revisedDiacritic: '\u0304' }, // Macron
+        3: { revisedDiacritic: '\u0300' }, // Grave
+        4: { revisedDiacritic: '\u0301' }, // Acute
+        5: { revisedDiacritic: '\u0302' }, // Circumflex
+        6: { revisedDiacritic: '\u0300' }, // Grave on entering tone
+        7: { revisedDiacritic: '' },       // Unmarked stop coda (-b/-t/-k/-h)
+        8: { revisedDiacritic: '\u0301' }  // Acute on stop coda (-b/-t/-k/-h)
+    };
+
+    function processSyllable(token, src, tgt) {
+        if (!token.trim()) return token;
+
+        let toneNum = null;
+        let cleanToken = token.normalize('NFD');
+        
+        // Extract tone digit if present at token end (1-8 or B)
+        const numMatch = cleanToken.match(/(\d|B)$/i);
+        if (numMatch) {
+            toneNum = numMatch[0].toUpperCase() === 'B' ? 8 : parseInt(numMatch[0]);
+            cleanToken = cleanToken.replace(/(\d|B)$/i, '');
+        }
+
+        let base = cleanToken;
+        if (src === tgt) return token;
+
+        // Hengji Peng'im -> Revised Peng'im
+        if (src === 'Pengim' && tgt === 'Revised') {
+            if (toneNum) {
+                let vowels = ['a','e','i','o','u','eu'];
+                let targetVowelIdx = -1;
+                
+                for (let i = 0; i < base.length; i++) {
+                    if (vowels.includes(base[i].toLowerCase())) {
+                        targetVowelIdx = i;
+                        break;
+                    }
+                }
+
+                if (targetVowelIdx !== -1 && toneMarkers[toneNum] && toneMarkers[toneNum].revisedDiacritic) {
+                    const mark = toneMarkers[toneNum].revisedDiacritic;
+                    base = base.slice(0, targetVowelIdx + 1) + mark + base.slice(targetVowelIdx + 1);
+                }
+            }
+            return base.normalize('NFC');
+        }
+
+        // Revised Peng'im -> Hengji Peng'im
+        if (src === 'Revised' && tgt === 'Pengim') {
+            let extractedTone = '';
+            const isStopCoda = /[ptkhb]$/i.test(base.replace(/[\u0300-\u036f]/g, ""));
+
+            if (base.includes('\u0301')) {
+                extractedTone = isStopCoda ? '8' : '4';
+            } else if (base.includes('\u0300')) {
+                extractedTone = isStopCoda ? '6' : '3';
+            } else if (base.includes('\u0304')) {
+                extractedTone = '2';
+            } else if (base.includes('\u0302')) {
+                extractedTone = '5';
+            } else if (isStopCoda) {
+                extractedTone = '7';
+            } else {
+                extractedTone = '1';
+            }
+
+            let stripped = base.replace(/[\u0300-\u036f]/g, "");
+            return stripped + extractedTone;
+        }
+
+        return token;
+    }
+
+    function transcribe(text, srcScheme, tgtScheme) {
+        const tokens = text.split(/(\s+|,|\.)/);
+        return tokens.map(token => {
+            if (/^\s+$/.test(token) || [',', '.'].includes(token)) return token;
+            return processSyllable(token, srcScheme, tgtScheme);
+        }).join('');
+    }
+
+    document.getElementById('transcribeBtn').addEventListener('click', () => {
+        const input = document.getElementById('inputText').value;
+        const src = document.getElementById('sourceScheme').value;
+        const tgt = document.getElementById('targetScheme').value;
+        
+        const result = transcribe(input, src, tgt);
+        document.getElementById('outputText').innerText = result;
+    });
+</script>
+
+</body>
+</html>
