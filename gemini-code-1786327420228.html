@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peichew Phonetic Transcriber</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f7f9fb;
+            color: #2c3e50;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 24px;
+        }
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            color: #1a252f;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        select, textarea {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .output-box {
+            margin-top: 20px;
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 6px;
+            min-height: 60px;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🔤 Peichew Script Transcriber</h1>
+    
+    <div class="grid">
+        <div class="form-group">
+            <label for="sourceScheme">Source System:</label>
+            <select id="sourceScheme">
+                <option value="IPA">IPA</option>
+                <option value="Katngji">Kà-tn̂g-jī</option>
+                <option value="Pengim">Peng'im</option>
+                <option value="Revised" selected>Revised Peng'im</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetScheme">Target System:</label>
+            <select id="targetScheme">
+                <option value="IPA">IPA</option>
+                <option value="Katngji">Kà-tn̂g-jī</option>
+                <option value="Pengim" selected>Peng'im</option>
+                <option value="Revised">Revised Peng'im</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 16px;">
+        <label for="inputText">Input Syllables / Words:</label>
+        <textarea id="inputText" placeholder="Type or paste text here (e.g., si1, hung1, sĩ)..."></textarea>
+    </div>
+
+    <button id="transcribeBtn">Transcribe</button>
+
+    <div class="form-group" style="margin-top: 20px;">
+        <label>Result:</label>
+        <div id="outputText" class="output-box"></div>
+    </div>
+</div>
+
+<script>
+    // --- Mapping Rules (Mapped against Revised Peng'im as central pivot) ---
+    const consonants = {
+        // IPA: [IPA, Katngji, Pengim, Revised]
+        'b':  ['b',  'b',  'b',  'b'],
+        'p':  ['pʰ', 'ph', 'p',  'p'],
+        'm':  ['m',  'm',  'm',  'm'],
+        'd':  ['t',  't',  'd',  'd'],
+        't':  ['tʰ', 'th', 't',  't'],
+        'n':  ['n',  'n',  'n',  'n'],
+        'g':  ['k',  'k',  'g',  'g'],
+        'k':  ['kʰ', 'kh', 'k',  'k'],
+        'ng': ['ŋ',  'ng', 'ng', 'ng'],
+        'z':  ['ts', 'ch', 'z',  'z'],
+        ['c']:['tsʰ','chh','c',  'c'],
+        's':  ['s',  's',  's',  's'],
+        'h':  ['h',  'h',  'h',  'h']
+    };
+
+    // Tone map mappings relative to tone number (1-8)
+    const toneMarkers = {
+        // [Tone Number, Revised Accent]
+        1: { diacritic: '',   revisedDiacritic: '' },     // Dark flat (unmarked open)
+        2: { diacritic: '́',  revisedDiacritic: '\u0301' }, // Dark rising (acute)
+        3: { diacritic: '̀',  revisedDiacritic: '\u0300' }, // Dark departing (grave)
+        4: { diacritic: '',   revisedDiacritic: '' },     // Dark entering (stop ending)
+        5: { diacritic: '̂',  revisedDiacritic: '\u0302' }, // Light flat (circumflex)
+        6: { diacritic: '́',  revisedDiacritic: '\u0301' }, // Light rising
+        7: { diacritic: '̄',  revisedDiacritic: '\u0304' }, // Light departing (macron)
+        8: { diacritic: '́',  revisedDiacritic: '\u0301' }  // Light entering
+    };
+
+    function processSyllable(token, src, tgt) {
+        if (!token.trim()) return token;
+
+        // Extract numbers if using standard Pengim numerical tone format (e.g. si1, hung2)
+        let toneNum = null;
+        let cleanToken = token.normalize('NFD');
+        
+        const numMatch = cleanToken.match(/\d$/);
+        if (numMatch) {
+            toneNum = parseInt(numMatch[0]);
+            cleanToken = cleanToken.replace(/\d$/, '');
+        }
+
+        // Standardize input mapping to Revised base
+        let base = cleanToken;
+
+        // Perform transcription logic based on selections
+        if (src === tgt) return token;
+
+        // Handling numerical tones from Peng'im conversion to Revised
+        if (src === 'Pengim' && tgt === 'Revised' && toneNum) {
+            let vowels = ['a','e','i','o','u'];
+            let targetVowelIdx = -1;
+            
+            for (let i = 0; i < base.length; i++) {
+                if (vowels.includes(base[i].toLowerCase())) {
+                    targetVowelIdx = i;
+                    break;
+                }
+            }
+
+            if (targetVowelIdx !== -1 && toneMarkers[toneNum] && toneMarkers[toneNum].revisedDiacritic) {
+                const mark = toneMarkers[toneNum].revisedDiacritic;
+                base = base.slice(0, targetVowelIdx + 1) + mark + base.slice(targetVowelIdx + 1);
+            }
+            return base.normalize('NFC');
+        }
+
+        // Revised diacritics back to Numerical Peng'im
+        if (src === 'Revised' && tgt === 'Pengim') {
+            let extractedTone = '';
+            if (base.includes('\u0301')) extractedTone = '2'; // or 6/8 based on codas
+            else if (base.includes('\u0300')) extractedTone = '3';
+            else if (base.includes('\u0302')) extractedTone = '5';
+            else if (base.includes('\u0304')) extractedTone = '7';
+
+            // Clean diacritics
+            let stripped = base.replace(/[\u0300-\u036f]/g, "");
+            return stripped + extractedTone;
+        }
+
+        return token; // Fallback for raw text
+    }
+
+    // Main conversion orchestrator
+    function transcribe(text, srcScheme, tgtScheme) {
+        // Split text by space/words to isolate tokens
+        const tokens = text.split(/(\s+|,|\.)/);
+        return tokens.map(token => {
+            if (/^\s+$/.test(token) || [',', '.'].includes(token)) return token;
+            return processSyllable(token, srcScheme, tgtScheme);
+        }).join('');
+    }
+
+    // UI Event listeners
+    document.getElementById('transcribeBtn').addEventListener('click', () => {
+        const input = document.getElementById('inputText').value;
+        const src = document.getElementById('sourceScheme').value;
+        const tgt = document.getElementById('targetScheme').value;
+        
+        const result = transcribe(input, src, tgt);
+        document.getElementById('outputText').innerText = result;
+    });
+</script>
+
+</body>
+</html>
