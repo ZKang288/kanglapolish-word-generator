@@ -9,7 +9,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f7f9fb;
             color: #2c3e50;
-            max-width: 800px;
+            max-width: 900px;
             margin: 40px auto;
             padding: 24px;
         }
@@ -18,12 +18,14 @@
             padding: 24px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
         }
-        h1 {
-            font-size: 1.8rem;
+        h1, h2 {
             margin-top: 0;
             color: #1a252f;
         }
+        h1 { font-size: 1.8rem; }
+        h2 { font-size: 1.3rem; margin-bottom: 12px; }
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -47,7 +49,7 @@
             font-family: inherit;
         }
         textarea {
-            height: 120px;
+            height: 100px;
             resize: vertical;
         }
         select:focus, textarea:focus {
@@ -75,9 +77,31 @@
             background: #f1f5f9;
             padding: 16px;
             border-radius: 6px;
-            min-height: 60px;
+            min-height: 50px;
             font-size: 1.1rem;
             word-break: break-all;
+        }
+        /* Table Styling */
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
         }
     </style>
 </head>
@@ -92,8 +116,8 @@
             <select id="sourceScheme">
                 <option value="IPA">IPA</option>
                 <option value="Katngji">Kà-tn̂g-jī</option>
-                <option value="Pengim">Peng'im</option>
-                <option value="Revised" selected>Revised Peng'im</option>
+                <option value="Pengim" selected>Peng'im</option>
+                <option value="Revised">Revised Peng'im</option>
             </select>
         </div>
         
@@ -102,15 +126,15 @@
             <select id="targetScheme">
                 <option value="IPA">IPA</option>
                 <option value="Katngji">Kà-tn̂g-jī</option>
-                <option value="Pengim" selected>Peng'im</option>
-                <option value="Revised">Revised Peng'im</option>
+                <option value="Pengim">Peng'im</option>
+                <option value="Revised" selected>Revised Peng'im</option>
             </select>
         </div>
     </div>
 
     <div class="form-group" style="margin-bottom: 16px;">
         <label for="inputText">Input Syllables / Words:</label>
-        <textarea id="inputText" placeholder="Type or paste text here (e.g., si1, hung1, sĩ)..."></textarea>
+        <textarea id="inputText" placeholder="Type or paste text here (e.g., si1, hung1, si2)..."></textarea>
     </div>
 
     <button id="transcribeBtn">Transcribe</button>
@@ -121,10 +145,76 @@
     </div>
 </div>
 
+<!-- Reference Guide Table -->
+<div class="card">
+    <h2>📖 Peichew Tone Conversion Guide</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tone Name</th>
+                    <th>Tone Value</th>
+                    <th>Peng'im Symbol</th>
+                    <th>Revised Peng'im Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>陰平 (dark flat)</td>
+                    <td>33</td>
+                    <td>1</td>
+                    <td>a, si, hung</td>
+                </tr>
+                <tr>
+                    <td>陰上 (dark rising)</td>
+                    <td>52</td>
+                    <td>2</td>
+                    <td>á, sĩ, húng</td>
+                </tr>
+                <tr>
+                    <td>陰去 (dark departing)</td>
+                    <td>213</td>
+                    <td>3</td>
+                    <td>à, sı̀, hùng</td>
+                </tr>
+                <tr>
+                    <td>陰入 (dark entering)</td>
+                    <td>2</td>
+                    <td>4</td>
+                    <td>ah, sih, hug</td>
+                </tr>
+                <tr>
+                    <td>陽平 (light flat)</td>
+                    <td>65</td>
+                    <td>5</td>
+                    <td>â, sı̃, hôn</td>
+                </tr>
+                <tr>
+                    <td>陽上 (light rising)</td>
+                    <td>36</td>
+                    <td>6</td>
+                    <td>á, sı̃, húng</td>
+                </tr>
+                <tr>
+                    <td>陽去 (light departing)</td>
+                    <td>11</td>
+                    <td>7</td>
+                    <td>ā, sı̃, hūng</td>
+                </tr>
+                <tr>
+                    <td>陽入 (light entering)</td>
+                    <td>4</td>
+                    <td>8</td>
+                    <td>áh, sı̃h, húg</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script>
     // --- Mapping Rules (Mapped against Revised Peng'im as central pivot) ---
     const consonants = {
-        // IPA: [IPA, Katngji, Pengim, Revised]
         'b':  ['b',  'b',  'b',  'b'],
         'p':  ['pʰ', 'ph', 'p',  'p'],
         'm':  ['m',  'm',  'm',  'm'],
@@ -135,28 +225,25 @@
         'k':  ['kʰ', 'kh', 'k',  'k'],
         'ng': ['ŋ',  'ng', 'ng', 'ng'],
         'z':  ['ts', 'ch', 'z',  'z'],
-        ['c']:['tsʰ','chh','c',  'c'],
+        'c':  ['tsʰ','chh','c',  'c'],
         's':  ['s',  's',  's',  's'],
         'h':  ['h',  'h',  'h',  'h']
     };
 
-    // Tone map mappings relative to tone number (1-8)
     const toneMarkers = {
-        // [Tone Number, Revised Accent]
-        1: { diacritic: '',   revisedDiacritic: '' },     // Dark flat (unmarked open)
-        2: { diacritic: '́',  revisedDiacritic: '\u0301' }, // Dark rising (acute)
-        3: { diacritic: '̀',  revisedDiacritic: '\u0300' }, // Dark departing (grave)
-        4: { diacritic: '',   revisedDiacritic: '' },     // Dark entering (stop ending)
-        5: { diacritic: '̂',  revisedDiacritic: '\u0302' }, // Light flat (circumflex)
-        6: { diacritic: '́',  revisedDiacritic: '\u0301' }, // Light rising
-        7: { diacritic: '̄',  revisedDiacritic: '\u0304' }, // Light departing (macron)
-        8: { diacritic: '́',  revisedDiacritic: '\u0301' }  // Light entering
+        1: { revisedDiacritic: '' },
+        2: { revisedDiacritic: '\u0301' },
+        3: { revisedDiacritic: '\u0300' },
+        4: { revisedDiacritic: '' },
+        5: { revisedDiacritic: '\u0302' },
+        6: { revisedDiacritic: '\u0301' },
+        7: { revisedDiacritic: '\u0304' },
+        8: { revisedDiacritic: '\u0301' }
     };
 
     function processSyllable(token, src, tgt) {
         if (!token.trim()) return token;
 
-        // Extract numbers if using standard Pengim numerical tone format (e.g. si1, hung2)
         let toneNum = null;
         let cleanToken = token.normalize('NFD');
         
@@ -166,13 +253,10 @@
             cleanToken = cleanToken.replace(/\d$/, '');
         }
 
-        // Standardize input mapping to Revised base
         let base = cleanToken;
-
-        // Perform transcription logic based on selections
         if (src === tgt) return token;
 
-        // Handling numerical tones from Peng'im conversion to Revised
+        // Convert Peng'im numeric notation to Revised diacritics
         if (src === 'Pengim' && tgt === 'Revised' && toneNum) {
             let vowels = ['a','e','i','o','u'];
             let targetVowelIdx = -1;
@@ -191,25 +275,22 @@
             return base.normalize('NFC');
         }
 
-        // Revised diacritics back to Numerical Peng'im
+        // Convert Revised diacritics to numeric Peng'im
         if (src === 'Revised' && tgt === 'Pengim') {
             let extractedTone = '';
-            if (base.includes('\u0301')) extractedTone = '2'; // or 6/8 based on codas
+            if (base.includes('\u0301')) extractedTone = '2';
             else if (base.includes('\u0300')) extractedTone = '3';
             else if (base.includes('\u0302')) extractedTone = '5';
             else if (base.includes('\u0304')) extractedTone = '7';
 
-            // Clean diacritics
             let stripped = base.replace(/[\u0300-\u036f]/g, "");
             return stripped + extractedTone;
         }
 
-        return token; // Fallback for raw text
+        return token;
     }
 
-    // Main conversion orchestrator
     function transcribe(text, srcScheme, tgtScheme) {
-        // Split text by space/words to isolate tokens
         const tokens = text.split(/(\s+|,|\.)/);
         return tokens.map(token => {
             if (/^\s+$/.test(token) || [',', '.'].includes(token)) return token;
@@ -217,7 +298,6 @@
         }).join('');
     }
 
-    // UI Event listeners
     document.getElementById('transcribeBtn').addEventListener('click', () => {
         const input = document.getElementById('inputText').value;
         const src = document.getElementById('sourceScheme').value;
