@@ -258,47 +258,82 @@
 </div>
 
 <script>
-    // === Vowel Mappings ===
-    // Peng'im: 'e' -> Revised: 'eu'
-    // Peng'im: 'ê' -> Revised: 'e'
-    // NOTE: by the time these run, the token has already been NFD-normalized,
-    // so Peng'im 'ê' arrives as the two code points 'e' + U+0302 (combining circumflex).
-    // A placeholder is used so the 'ê -> e' and plain 'e -> eu' rules can't clobber each other.
-    const VOWEL_PLACEHOLDER = '\u0001';
+    // === Phoneme chart ===
+    // One entry per phoneme in the Peighe Romanisation Chart above (26 total).
+    // `match` lists the form(s) recognised when that scheme is the SOURCE (includes
+    // optional/alternate spellings). `out` gives the canonical form written when that
+    // scheme is the TARGET.
+    // NOTE: a few phonemes share identical forms across two chart rows (e.g. ts/tsʰ each
+    // appear twice with different Kà-tn̂g-jī or Peng'im spellings, and 'r' is used for both
+    // dʑ and (d)z in Peng'im/Revised). Converting FROM the scheme that collapsed the
+    // distinction can't recover it — the first matching chart row is used in that case.
+    const phonemeChart = [
+        { ipa: ['a'],      kat: ['a'],   peng: ['a'],  rev: ['a'],      out: { ipa: 'a',   kat: 'a',   peng: 'a',  rev: 'a'  } },
+        { ipa: ['b'],      kat: ['b'],   peng: ['bh'], rev: ['bh'],     out: { ipa: 'b',   kat: 'b',   peng: 'bh', rev: 'bh' } },
+        { ipa: ['ts'],     kat: ['ch'],  peng: ['z'],  rev: ['z'],      out: { ipa: 'ts',  kat: 'ch',  peng: 'z',  rev: 'z'  } },
+        { ipa: ['tsʰ'],    kat: ['chh'], peng: ['c'],  rev: ['c'],      out: { ipa: 'tsʰ', kat: 'chh', peng: 'c',  rev: 'c'  } },
+        { ipa: ['e'],      kat: ['e'],   peng: ['ê'],  rev: ['e'],      out: { ipa: 'e',   kat: 'e',   peng: 'ê',  rev: 'e'  } },
+        { ipa: ['g'],      kat: ['g'],   peng: ['gh'], rev: ['gh'],     out: { ipa: 'g',   kat: 'g',   peng: 'gh', rev: 'gh' } },
+        { ipa: ['h'],      kat: ['h'],   peng: ['h'],  rev: ['h'],      out: { ipa: 'h',   kat: 'h',   peng: 'h',  rev: 'h'  } },
+        { ipa: ['i'],      kat: ['i'],   peng: ['i'],  rev: ['yi','i'], out: { ipa: 'i',   kat: 'i',   peng: 'i',  rev: 'i'  } },
+        { ipa: ['dʑ'],     kat: ['j'],   peng: ['r'],  rev: ['r'],      out: { ipa: 'dʑ',  kat: 'j',   peng: 'r',  rev: 'r'  } },
+        { ipa: ['k'],      kat: ['k'],   peng: ['g'],  rev: ['g'],      out: { ipa: 'k',   kat: 'k',   peng: 'g',  rev: 'g'  } },
+        { ipa: ['kʰ'],     kat: ['kh'],  peng: ['k'],  rev: ['k'],      out: { ipa: 'kʰ',  kat: 'kh',  peng: 'k',  rev: 'k'  } },
+        { ipa: ['l'],      kat: ['l'],   peng: ['l'],  rev: ['l'],      out: { ipa: 'l',   kat: 'l',   peng: 'l',  rev: 'l'  } },
+        { ipa: ['m'],      kat: ['m'],   peng: ['m'],  rev: ['m'],      out: { ipa: 'm',   kat: 'm',   peng: 'm',  rev: 'm'  } },
+        { ipa: ['n'],      kat: ['n'],   peng: ['n'],  rev: ['n'],      out: { ipa: 'n',   kat: 'n',   peng: 'n',  rev: 'n'  } },
+        { ipa: ['ŋ'],      kat: ['ⁿg'],  peng: ['ng'], rev: ['ng'],     out: { ipa: 'ŋ',   kat: 'ⁿg',  peng: 'ng', rev: 'ng' } },
+        { ipa: ['o'],      kat: ['o'],   peng: ['o'],  rev: ['o'],      out: { ipa: 'o',   kat: 'o',   peng: 'o',  rev: 'o'  } },
+        { ipa: ['p'],      kat: ['p'],   peng: ['b'],  rev: ['b'],      out: { ipa: 'p',   kat: 'p',   peng: 'b',  rev: 'b'  } },
+        { ipa: ['pʰ'],     kat: ['ph'],  peng: ['p'],  rev: ['p'],      out: { ipa: 'pʰ',  kat: 'ph',  peng: 'p',  rev: 'p'  } },
+        { ipa: ['s'],      kat: ['s'],   peng: ['s'],  rev: ['s'],      out: { ipa: 's',   kat: 's',   peng: 's',  rev: 's'  } },
+        { ipa: ['t'],      kat: ['t'],   peng: ['d'],  rev: ['d'],      out: { ipa: 't',   kat: 't',   peng: 'd',  rev: 'd'  } },
+        { ipa: ['tʰ'],     kat: ['th'],  peng: ['t'],  rev: ['t'],      out: { ipa: 'tʰ',  kat: 'th',  peng: 't',  rev: 't'  } },
+        { ipa: ['ts'],     kat: ['ts'],  peng: ['z'],  rev: ['z'],      out: { ipa: 'ts',  kat: 'ts',  peng: 'z',  rev: 'z'  } },
+        { ipa: ['tsʰ'],    kat: ['tsh'], peng: ['ch'], rev: ['c'],      out: { ipa: 'tsʰ', kat: 'tsh', peng: 'ch', rev: 'c'  } },
+        { ipa: ['u'],      kat: ['u'],   peng: ['u'],  rev: ['w','u'],  out: { ipa: 'u',   kat: 'u',   peng: 'u',  rev: 'u'  } },
+        { ipa: ['ɯ'],      kat: ['ṳ'],   peng: ['e'],  rev: ['eu'],     out: { ipa: 'ɯ',   kat: 'ṳ',   peng: 'e',  rev: 'eu' } },
+        { ipa: ['dz','z'], kat: ['z'],   peng: ['r'],  rev: ['r'],      out: { ipa: 'dz',  kat: 'z',   peng: 'r',  rev: 'r'  } },
+    ];
 
-    function convertVowelsToRevised(str) {
-        // ê (e + combining circumflex) -> e, protected first
-        str = str.replace(/e\u0302/g, VOWEL_PLACEHOLDER);
-        // any remaining plain e -> eu
-        str = str.replace(/e/g, 'eu');
-        // restore the protected ê as plain e
-        str = str.replace(new RegExp(VOWEL_PLACEHOLDER, 'g'), 'e');
-        return str;
+    // Build a sorted (longest-first) lookup list of recognised forms for a given scheme,
+    // keyed off the phoneme chart above. On duplicate forms (e.g. the two 'ts' entries)
+    // the first chart row wins.
+    function buildMatchList(schemeKey) {
+        const seen = new Map();
+        phonemeChart.forEach((entry, idx) => {
+            entry[schemeKey].forEach(form => {
+                const key = form.normalize('NFC');
+                if (!seen.has(key)) seen.set(key, idx);
+            });
+        });
+        return [...seen.entries()]
+            .map(([form, idx]) => ({ form, idx }))
+            .sort((a, b) => b.form.length - a.form.length);
     }
 
-    function convertVowelsFromRevised(str) {
-        // eu -> e, protected first
-        str = str.replace(/eu/g, VOWEL_PLACEHOLDER);
-        // any remaining plain e -> ê (e + combining circumflex, composed later via NFC)
-        str = str.replace(/e/g, 'e\u0302');
-        // restore the protected eu-origin e
-        str = str.replace(new RegExp(VOWEL_PLACEHOLDER, 'g'), 'e');
-        return str;
-    }
+    const matchLists = {
+        IPA: buildMatchList('ipa'),
+        Katngji: buildMatchList('kat'),
+        Pengim: buildMatchList('peng'),
+        Revised: buildMatchList('rev'),
+    };
+    const schemeOutKey = { IPA: 'ipa', Katngji: 'kat', Pengim: 'peng', Revised: 'rev' };
 
-    // Combining diacritics used for each of the 8 tones in Revised Peng'im.
+    // Combining diacritics used for each of the 8 tones in Revised Peng'im / Kà-tn̂g-jī.
     // Tones 1 & 4 are both unmarked; tones 5 & 8 both use circumflex.
     // Each pair is disambiguated by coda (see isEnteringTone below).
     const toneMarkers = {
-        1: { revisedDiacritic: '' },
-        2: { revisedDiacritic: '\u0301' }, // á  acute
-        3: { revisedDiacritic: '\u0300' }, // à  grave
-        4: { revisedDiacritic: '' },
-        5: { revisedDiacritic: '\u0302' }, // â  circumflex
-        6: { revisedDiacritic: '\u0306' }, // ă  breve
-        7: { revisedDiacritic: '\u0304' }, // ā  macron
-        8: { revisedDiacritic: '\u0302' }  // âh circumflex
+        1: '', 2: '\u0301', 3: '\u0300', 4: '', 5: '\u0302', 6: '\u0306', 7: '\u0304', 8: '\u0302'
     };
+
+    // Chart indices (0-based) that are vowels / nasal consonants, used by the
+    // tone-placement rules below. i and u are singled out because rules 2 & 3
+    // specifically key off them; 'eu' (idx 24, the /ɯ/ phoneme) is its own vowel
+    // and is NOT treated as containing a 'u' for those rules.
+    const VOWEL_IDX = new Set([0, 4, 7, 15, 23, 24]); // a e i o u eu
+    const NASAL_IDX = new Set([12, 13, 14]);          // m n ng
+    const I_IDX = 7, U_IDX = 23, O_IDX = 15;
 
     // Entering tones (4/8) end in a stop coda: -p, -t, -k (spelled 'g'), or -h.
     // The 'g' check excludes '-ng' (nasal coda, e.g. "hung") via a negative lookbehind,
@@ -307,69 +342,160 @@
         return /(?<!n)g$/i.test(syllable) || /[pth]$/i.test(syllable);
     }
 
+    // Decide which token in the syllable gets the tone diacritic, following the
+    // traditional POJ / Revised Peng'im placement rules:
+    //   1. One vowel -> mark it.
+    //   2. Diphthong with i or u (not both) -> mark the OTHER vowel.
+    //   3. Diphthong with both i and u -> mark u.
+    //   4. Final of 3+ letters -> mark the second vowel (unless rule 2/3 applies).
+    //   5. o + a/e -> mark o (unless rule 4 applies).
+    //   6. No vowel -> mark the nasal consonant.
+    // Returns the index into `tokens` that should receive the mark, or null.
+    function chooseToneTokenIndex(tokens) {
+        const vowelPositions = [];
+        tokens.forEach((t, i) => { if (t.idx !== undefined && VOWEL_IDX.has(t.idx)) vowelPositions.push(i); });
+
+        if (vowelPositions.length === 0) {
+            // Rule 6: no vowel -> mark the (last) nasal consonant in the syllable.
+            let lastNasal = null;
+            tokens.forEach((t, i) => { if (t.idx !== undefined && NASAL_IDX.has(t.idx)) lastNasal = i; });
+            return lastNasal;
+        }
+
+        if (vowelPositions.length === 1) {
+            // Rule 1: exactly one vowel -> mark it.
+            return vowelPositions[0];
+        }
+
+        const nucleus = vowelPositions; // contiguous run of vowel tokens
+        const nucleusIdxs = nucleus.map(p => tokens[p].idx);
+        const hasI = nucleusIdxs.includes(I_IDX);
+        const hasU = nucleusIdxs.includes(U_IDX);
+
+        // Total letters from the first vowel to the end of the syllable (nucleus + coda).
+        const finalTokens = tokens.slice(nucleus[0]);
+        const finalLetterCount = finalTokens.reduce((sum, t) => sum + (t.outLen || 0), 0);
+
+        if (nucleus.length === 2 && hasI && hasU) {
+            // Rule 3: diphthong has both i and u -> mark u.
+            return nucleus[nucleusIdxs.indexOf(U_IDX)];
+        }
+        if (nucleus.length === 2 && (hasI || hasU)) {
+            // Rule 2: diphthong has i or u (not both) -> mark the other vowel.
+            const iOrUPos = nucleusIdxs[0] === (hasI ? I_IDX : U_IDX) ? 0 : 1;
+            return nucleus[1 - iOrUPos];
+        }
+        if (nucleus.length >= 3) {
+            // Rule 4: 3+ vowels in the nucleus -> mark the second vowel.
+            return nucleus[1];
+        }
+        if (finalLetterCount >= 3) {
+            // Rule 4: 2-vowel nucleus but a 3+ letter final (coda present) -> mark the second vowel.
+            return nucleus[1];
+        }
+        // Rule 5: o + a/e with no coda -> mark o. Otherwise fall back to the first vowel.
+        const oPos = nucleus.find(p => tokens[p].idx === O_IDX);
+        return oPos !== undefined ? oPos : nucleus[0];
+    }
+
+    // Greedily tokenize a (delimiter/tone-stripped) skeleton into phoneme chart entries,
+    // longest match first. Unrecognised characters pass through unchanged.
+    function tokenizeSkeleton(skeleton, scheme) {
+        const list = matchLists[scheme];
+        const lower = skeleton.toLowerCase();
+        const tokens = [];
+        let pos = 0;
+        while (pos < skeleton.length) {
+            let matched = null;
+            for (const { form, idx } of list) {
+                if (lower.startsWith(form.toLowerCase(), pos)) { matched = { idx, len: form.length }; break; }
+            }
+            if (matched) {
+                tokens.push({ idx: matched.idx });
+                pos += matched.len;
+            } else {
+                tokens.push({ literal: skeleton[pos] });
+                pos += 1;
+            }
+        }
+        return tokens;
+    }
+
+    // IPA is conventionally wrapped in / / or [ ]; strip those before parsing.
+    function stripDelimiters(str) {
+        return str.replace(/^[\/\[]/, '').replace(/[\/\]]$/, '');
+    }
+
     function processSyllable(token, src, tgt) {
         if (!token.trim()) return token;
-
-        let toneNum = null;
-        let cleanToken = token.normalize('NFD');
-        
-        const numMatch = cleanToken.match(/\d$/);
-        if (numMatch) {
-            toneNum = parseInt(numMatch[0]);
-            cleanToken = cleanToken.replace(/\d$/, '');
-        }
-
-        let base = cleanToken;
         if (src === tgt) return token;
 
-        // Convert Peng'im to Revised Peng'im
-        if (src === 'Pengim' && tgt === 'Revised') {
-            base = convertVowelsToRevised(base);
+        let working = stripDelimiters(token).normalize('NFD');
+        let toneNum = null;
 
-            if (toneNum) {
-                let vowels = ['a','e','i','o','u','eu'];
-                let targetVowelIdx = -1;
-                
-                for (let i = 0; i < base.length; i++) {
-                    if (vowels.includes(base[i].toLowerCase())) {
-                        targetVowelIdx = i;
-                        break;
+        // Trailing digit (Peng'im convention) is recognised regardless of source scheme.
+        const digitMatch = working.match(/\d$/);
+        if (digitMatch) {
+            toneNum = parseInt(digitMatch[0]);
+            working = working.replace(/\d$/, '');
+        } else if (src === 'Revised' || src === 'Katngji') {
+            // Diacritic-based tone (Revised Peng'im / Kà-tn̂g-jī convention).
+            const hasAcute = working.includes('\u0301');
+            const hasGrave = working.includes('\u0300');
+            const hasBreve = working.includes('\u0306');
+            const hasMacron = working.includes('\u0304');
+            const hasCircumflex = working.includes('\u0302');
+            const strippedForCoda = working.replace(/[\u0300-\u036f]/g, "");
+            const entering = isEnteringTone(strippedForCoda);
+
+            if (hasAcute) toneNum = 2;
+            else if (hasGrave) toneNum = 3;
+            else if (hasBreve) toneNum = 6;
+            else if (hasMacron) toneNum = 7;
+            else if (hasCircumflex) toneNum = entering ? 8 : 5;
+            else toneNum = entering ? 4 : 1;
+
+            working = working.replace(/[\u0300-\u036f]/g, "");
+        }
+
+        // Recompose (e.g. Peng'im 'ê' back into one code point) so it matches the
+        // precomposed forms stored in the phoneme chart.
+        working = working.normalize('NFC');
+
+        const tokens = tokenizeSkeleton(working, src);
+        const outKey = schemeOutKey[tgt];
+
+        // Resolve each token's output string in the target scheme up front, since the
+        // tone-placement rules need per-token lengths (e.g. to detect a 3+ letter final).
+        tokens.forEach(t => {
+            t.out = t.idx !== undefined ? phonemeChart[t.idx].out[outKey] : t.literal;
+            t.outLen = t.out.length;
+        });
+        let out = tokens.map(t => t.out).join('').normalize('NFC');
+
+        if (toneNum) {
+            if (tgt === 'Pengim') {
+                out += String(toneNum);
+            } else if (tgt === 'Revised' || tgt === 'Katngji') {
+                const mark = toneMarkers[toneNum];
+                if (mark) {
+                    const targetIdx = chooseToneTokenIndex(tokens);
+                    if (targetIdx !== null && targetIdx !== undefined) {
+                        // Insert the mark right after the FIRST character of that token's
+                        // output (handles multi-letter units like 'eu' or 'ng' correctly).
+                        let offset = 0;
+                        for (let i = 0; i < targetIdx; i++) offset += tokens[i].out.length;
+                        out = out.slice(0, offset + 1) + mark + out.slice(offset + 1);
                     }
                 }
-
-                if (targetVowelIdx !== -1 && toneMarkers[toneNum] && toneMarkers[toneNum].revisedDiacritic) {
-                    const mark = toneMarkers[toneNum].revisedDiacritic;
-                    base = base.slice(0, targetVowelIdx + 1) + mark + base.slice(targetVowelIdx + 1);
-                }
+                out = out.normalize('NFC');
             }
-            return base.normalize('NFC');
+            // IPA target: this chart doesn't define a tone notation, so tone is dropped.
         }
 
-        // Convert Revised Peng'im back to Peng'im
-        if (src === 'Revised' && tgt === 'Pengim') {
-            const hasAcute = base.includes('\u0301');      // tone 2 only
-            const hasGrave = base.includes('\u0300');      // tone 3 only
-            const hasBreve = base.includes('\u0306');      // tone 6 only
-            const hasMacron = base.includes('\u0304');     // tone 7 only
-            const hasCircumflex = base.includes('\u0302'); // tone 5 or 8
+        if (tgt === 'IPA') out = '/' + out + '/';
 
-            let stripped = base.replace(/[\u0300-\u036f]/g, "");
-            const entering = isEnteringTone(stripped);
-
-            let extractedTone = '';
-            if (hasAcute) extractedTone = '2';
-            else if (hasGrave) extractedTone = '3';
-            else if (hasBreve) extractedTone = '6';
-            else if (hasMacron) extractedTone = '7';
-            else if (hasCircumflex) extractedTone = entering ? '8' : '5';
-            else extractedTone = entering ? '4' : '1';
-
-            stripped = convertVowelsFromRevised(stripped);
-
-            return stripped.normalize('NFC') + extractedTone;
-        }
-
-        return token;
+        return out;
     }
 
     function transcribe(text, srcScheme, tgtScheme) {
