@@ -244,7 +244,7 @@
                 </tr>
                 <tr>
                     <td><strong>Revised Peng'im</strong></td>
-                    <td>a</td><td>bh</td><td>z</td><td>c</td><td>e</td><td>gh</td><td>h</td><td>(y)i</td><td>r</td><td>g</td><td>k</td><td>l</td><td>m</td>
+                    <td>a</td><td>bh</td><td>z</td><td>ch</td><td>e</td><td>gh</td><td>h</td><td>(y)i</td><td>r</td><td>g</td><td>k</td><td>l</td><td>m</td>
                     <td>n</td><td>ng</td><td>o</td><td>b</td><td>p</td><td>s</td><td>d</td><td>t</td><td>z</td><td>c</td><td>u/w</td><td>eu</td><td>r</td>
                 </tr>
             </tbody>
@@ -271,7 +271,7 @@
         { ipa: ['a'],      kat: ['a'],   peng: ['a'],  rev: ['a'],      out: { ipa: 'a',   kat: 'a',   peng: 'a',  rev: 'a'  } },
         { ipa: ['b'],      kat: ['b'],   peng: ['bh'], rev: ['bh'],     out: { ipa: 'b',   kat: 'b',   peng: 'bh', rev: 'bh' } },
         { ipa: ['ts'],     kat: ['ch'],  peng: ['z'],  rev: ['z'],      out: { ipa: 'ts',  kat: 'ch',  peng: 'z',  rev: 'z'  } },
-        { ipa: ['tsʰ'],    kat: ['chh'], peng: ['c'],  rev: ['c'],      out: { ipa: 'tsʰ', kat: 'chh', peng: 'c',  rev: 'c'  } },
+        { ipa: ['tsʰ'],    kat: ['chh'], peng: ['c'],  rev: ['ch'],     out: { ipa: 'tsʰ', kat: 'chh', peng: 'c',  rev: 'ch' } },
         { ipa: ['e'],      kat: ['e'],   peng: ['ê'],  rev: ['e'],      out: { ipa: 'e',   kat: 'e',   peng: 'ê',  rev: 'e'  } },
         { ipa: ['g'],      kat: ['g'],   peng: ['gh'], rev: ['gh'],     out: { ipa: 'g',   kat: 'g',   peng: 'gh', rev: 'gh' } },
         { ipa: ['h'],      kat: ['h'],   peng: ['h'],  rev: ['h'],      out: { ipa: 'h',   kat: 'h',   peng: 'h',  rev: 'h'  } },
@@ -426,10 +426,30 @@
         return str.replace(/^[\/\[]/, '').replace(/[\/\]]$/, '');
     }
 
+    // Detect whether the input syllable was ALL CAPS, Title case (first letter capital),
+    // or lowercase, so the same pattern can be re-applied to the (internally lowercase)
+    // conversion output. Only considers plain a-z/A-Z, since most IPA symbols have no
+    // case distinction anyway.
+    function detectCasing(token) {
+        const hasUpper = /[A-Z]/.test(token);
+        const hasLower = /[a-z]/.test(token);
+        if (hasUpper && !hasLower) return 'upper';
+        const firstAlpha = token.match(/[A-Za-z]/);
+        if (firstAlpha && firstAlpha[0] === firstAlpha[0].toUpperCase() && /[A-Z]/.test(firstAlpha[0])) return 'title';
+        return 'lower';
+    }
+
+    function applyCasing(str, casing) {
+        if (casing === 'upper') return str.toUpperCase();
+        if (casing === 'title' && str.length) return str.charAt(0).toUpperCase() + str.slice(1);
+        return str;
+    }
+
     function processSyllable(token, src, tgt) {
         if (!token.trim()) return token;
         if (src === tgt) return token;
 
+        const casing = detectCasing(token);
         let working = stripDelimiters(token).normalize('NFD');
         let toneNum = null;
 
@@ -493,6 +513,7 @@
             // IPA target: this chart doesn't define a tone notation, so tone is dropped.
         }
 
+        out = applyCasing(out, casing);
         if (tgt === 'IPA') out = '/' + out + '/';
 
         return out;
