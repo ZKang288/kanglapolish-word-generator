@@ -9,7 +9,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f8fafc;
             color: #1e293b;
-            max-width: 750px;
+            max-width: 800px;
             margin: 40px auto;
             padding: 24px;
         }
@@ -48,7 +48,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .form-group {
             display: flex;
@@ -117,8 +117,13 @@
     
     <div class="grid">
         <div class="form-group">
-            <label for="familySelect">Family Name:</label>
-            <select id="familySelect"></select>
+            <label for="namingMode">Naming Format:</label>
+            <select id="namingMode">
+                <option value="surname">Family Name + 記 (e.g. 陳記肉碎麵)</option>
+                <option value="male">Male Name (阿 X, e.g. 阿豪肉碎麵)</option>
+                <option value="female">Female Name (X 姐, e.g. 絮姐肉碎麵)</option>
+                <option value="any">🎲 Any Name Format (Random)</option>
+            </select>
         </div>
 
         <div class="form-group">
@@ -127,9 +132,16 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label for="numCount">How many names to generate?</label>
-        <input type="number" id="numCount" min="1" max="50" value="5">
+    <div class="grid">
+        <div class="form-group">
+            <label for="nameSelect">Specific Name/Surname (Optional):</label>
+            <select id="nameSelect"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="numCount">How many names to generate?</label>
+            <input type="number" id="numCount" min="1" max="50" value="5">
+        </div>
     </div>
 
     <button id="generateBtn" class="action-btn">Generate Names</button>
@@ -138,7 +150,6 @@
 </div>
 
 <script>
-    // Script state: 'trad' or 'simp'
     let currentScript = 'trad';
 
     // Teochew Surnames Dictionary
@@ -174,7 +185,8 @@
         { trad: "馮", simp: "冯", romanized: "Bâng" },
         { trad: "方", simp: "方", romanized: "Png" },
         { trad: "潘", simp: "潘", romanized: "Puan" },
-        { trad: "余", simp: "余", romanized: "Siah" },
+        { trad: "余", simp: "余", romanized: "Êu" },
+        { trad: "佘", simp: "佘", romanized: "Siâ" },
         { trad: "蕭", simp: "萧", romanized: "Siao" },
         { trad: "沈", simp: "沈", romanized: "Sim" },
         { trad: "孫", simp: "孙", romanized: "Seng" },
@@ -191,7 +203,47 @@
         { trad: "姚", simp: "姚", romanized: "Yên" }
     ];
 
-    // Food Database with Traditional and Simplified mappings
+    // Male Given Names (Format: 阿 X)
+    const maleNames = [
+        { trad: "豪", simp: "豪", romanized: "Haô" },
+        { trad: "慶", simp: "庆", romanized: "Kèng" },
+        { trad: "獻", simp: "献", romanized: "Hièng" },
+        { trad: "立", simp: "立", romanized: "Lib" },
+        { trad: "健", simp: "健", romanized: "Giãn" },
+        { trad: "建", simp: "建", romanized: "Giếng" },
+        { trad: "榮", simp: "荣", romanized: "Yông" },
+        { trad: "順", simp: "顺", romanized: "Sũng" },
+        { trad: "喬", simp: "乔", romanized: "Kiêu" },
+        { trad: "浩", simp: "浩", romanized: "Hao" },
+        { trad: "謙", simp: "谦", romanized: "Kiem" },
+        { trad: "錫", simp: "锡", romanized: "Siah" },
+        { trad: "振", simp: "振", romanized: "Ding" },
+        { trad: "炳", simp: "炳", romanized: "Béng" },
+        { trad: "裕", simp: "裕", romanized: "Rū" },
+        { trad: "秀", simp: "秀", romanized: "Siù" },
+        { trad: "權", simp: "权", romanized: "Kuêng" }
+    ];
+
+    // Female Given Names (Format: X 姐)
+    const femaleNames = [
+        { trad: "珠", simp: "珠", romanized: "Zu" },
+        { trad: "絮", simp: "絮", romanized: "Sù" },
+        { trad: "梅", simp: "梅", romanized: "Bhuê" },
+        { trad: "泳", simp: "泳", romanized: "Yòng" },
+        { trad: "惠", simp: "惠", romanized: "Hüi" },
+        { trad: "仙", simp: "仙", romanized: "Sieng" },
+        { trad: "鈿", simp: "钿", romanized: "Tiêng" },
+        { trad: "瑾", simp: "瑾", romanized: "Géung" },
+        { trad: "瑩", simp: "莹", romanized: "Yông" },
+        { trad: "荇", simp: "荇", romanized: "Heng" }
+    ];
+
+    // Affixes
+    const aPrefix = { trad: "阿", simp: "阿", romanized: "A" };
+    const zeSuffix = { trad: "姐", simp: "姐", romanized: "Zé" };
+    const kee = { trad: "記", simp: "记", romanized: "Kì" };
+
+    // Foods Database
     const foods = [
         { trad: "肉碎麵", simp: "肉碎面", romanized: "Nêk Chùi Mīn" },
         { trad: "肉骨茶", simp: "肉骨茶", romanized: "Nêk Gug Tê" },
@@ -208,29 +260,17 @@
         { trad: "蒸鯧魚", simp: "蒸鲳鱼", romanized: "Zeng Chien Hêu" }
     ];
 
-    // Character mapping for "Kì / Kee"
-    const kee = { trad: "記", simp: "记", romanized: "Kì" };
-
-    const familySelect = document.getElementById('familySelect');
+    const namingMode = document.getElementById('namingMode');
+    const nameSelect = document.getElementById('nameSelect');
     const foodSelect = document.getElementById('foodSelect');
     const scriptToggleBtn = document.getElementById('scriptToggleBtn');
     const resultsContainer = document.getElementById('results');
 
     function populateDropdowns() {
-        const selectedFamVal = familySelect.value || "random";
         const selectedFoodVal = foodSelect.value || "random";
+        const selectedMode = namingMode.value;
 
-        familySelect.innerHTML = '<option value="random">🎲 Any (Random)</option>';
         foodSelect.innerHTML = '<option value="random">🎲 Any (Random)</option>';
-
-        familyNames.forEach((f, idx) => {
-            const opt = document.createElement('option');
-            opt.value = idx;
-            const char = currentScript === 'trad' ? f.trad : f.simp;
-            opt.textContent = `${char} (${f.romanized})`;
-            familySelect.appendChild(opt);
-        });
-
         foods.forEach((f, idx) => {
             const opt = document.createElement('option');
             opt.value = idx;
@@ -238,30 +278,78 @@
             opt.textContent = `${char} (${f.romanized})`;
             foodSelect.appendChild(opt);
         });
-
-        familySelect.value = selectedFamVal;
         foodSelect.value = selectedFoodVal;
+
+        nameSelect.innerHTML = '<option value="random">🎲 Any (Random)</option>';
+        
+        let pool = [];
+        if (selectedMode === 'surname') pool = familyNames;
+        else if (selectedMode === 'male') pool = maleNames;
+        else if (selectedMode === 'female') pool = femaleNames;
+        else pool = [...familyNames, ...maleNames, ...femaleNames];
+
+        pool.forEach((item, idx) => {
+            const opt = document.createElement('option');
+            opt.value = idx;
+            const char = currentScript === 'trad' ? item.trad : item.simp;
+            opt.textContent = `${char} (${item.romanized})`;
+            nameSelect.appendChild(opt);
+        });
     }
 
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
     function generateNames() {
         const count = parseInt(document.getElementById('numCount').value) || 5;
-        const selectedFamily = familySelect.value;
         const selectedFood = foodSelect.value;
-        
+        const selectedMode = namingMode.value;
+        const selectedNameIdx = nameSelect.value;
+
         resultsContainer.innerHTML = '';
 
         for (let i = 0; i < count; i++) {
-            const family = selectedFamily === 'random' ? getRandom(familyNames) : familyNames[selectedFamily];
-            const food = selectedFood === 'random' ? getRandom(foods) : foods[selectedFood];
+            let mode = selectedMode;
+            if (mode === 'any') {
+                const modes = ['surname', 'male', 'female'];
+                mode = getRandom(modes);
+            }
 
-            const famChar = currentScript === 'trad' ? family.trad : family.simp;
+            let nameObj;
+            if (selectedNameIdx !== 'random') {
+                let pool = mode === 'surname' ? familyNames : (mode === 'male' ? maleNames : femaleNames);
+                nameObj = pool[selectedNameIdx] || getRandom(pool);
+            } else {
+                if (mode === 'surname') nameObj = getRandom(familyNames);
+                else if (mode === 'male') nameObj = getRandom(maleNames);
+                else nameObj = getRandom(femaleNames);
+            }
+
+            const foodObj = selectedFood === 'random' ? getRandom(foods) : foods[selectedFood];
+
+            let ownerHanzi = "";
+            let ownerRomanized = "";
+
+            const nameChar = currentScript === 'trad' ? nameObj.trad : nameObj.simp;
+            const aChar = currentScript === 'trad' ? aPrefix.trad : aPrefix.simp;
+            const zeChar = currentScript === 'trad' ? zeSuffix.trad : zeSuffix.simp;
             const keeChar = currentScript === 'trad' ? kee.trad : kee.simp;
-            const foodChar = currentScript === 'trad' ? food.trad : food.simp;
 
-            const fullHanzi = `${famChar}${keeChar}${foodChar}`;
-            const fullRomanized = `${family.romanized} ${kee.romanized} ${food.romanized}`;
+            if (mode === 'male') {
+                ownerHanzi = `${aChar}${nameChar}`;
+                ownerRomanized = `${aPrefix.romanized}-${nameObj.romanized}`;
+            } else if (mode === 'female') {
+                ownerHanzi = `${nameChar}${zeChar}`;
+                ownerRomanized = `${nameObj.romanized} ${zeSuffix.romanized}`;
+            } else {
+                // Surname format keeps 記 (Kì)
+                ownerHanzi = `${nameChar}${keeChar}`;
+                ownerRomanized = `${nameObj.romanized} ${kee.romanized}`;
+            }
+
+            const foodChar = currentScript === 'trad' ? foodObj.trad : foodObj.simp;
+
+            const fullHanzi = `${ownerHanzi}${foodChar}`;
+            const fullRomanized = `${ownerRomanized} ${foodObj.romanized}`;
 
             const item = document.createElement('div');
             item.className = 'restaurant-item';
@@ -272,6 +360,8 @@
             resultsContainer.appendChild(item);
         }
     }
+
+    namingMode.addEventListener('change', populateDropdowns);
 
     scriptToggleBtn.addEventListener('click', () => {
         if (currentScript === 'trad') {
@@ -289,7 +379,6 @@
 
     document.getElementById('generateBtn').addEventListener('click', generateNames);
 
-    // Initial setup
     populateDropdowns();
 </script>
 
