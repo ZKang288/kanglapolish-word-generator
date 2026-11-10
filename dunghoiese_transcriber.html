@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dunghoiese Phonetic Transcriber</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f7f9fb;
+            color: #2c3e50;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 24px;
+        }
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        h1, h2 { margin-top: 0; color: #1a252f; }
+        h1 { font-size: 1.8rem; }
+        h2 { font-size: 1.3rem; margin-bottom: 12px; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        select, textarea {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        textarea { height: 100px; resize: vertical; }
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #1d4ed8; }
+        button.swap {
+            width: auto;
+            background: #e2e8f0;
+            color: #334155;
+            padding: 10px 14px;
+        }
+        button.swap:hover { background: #cbd5e1; }
+        .output-box {
+            margin-top: 20px;
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 6px;
+            min-height: 50px;
+            font-size: 1.1rem;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+        .warnings {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #92400e;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 6px;
+            padding: 10px 14px;
+            display: none;
+        }
+        .warnings ul { margin: 0; padding-left: 18px; }
+        .table-container { overflow-x: auto; }
+        .scroll-y { max-height: 480px; overflow-y: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+        th, td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover { background-color: #f1f5f9; }
+        td.na { color: #94a3b8; }
+        td.diff { background: #fefce8; font-weight: 600; }
+        .note { font-size: 0.85rem; color: #64748b; margin: 12px 0 0; }
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🔤 Dunghoiese Script Transcriber</h1>
+
+    <div class="grid">
+        <div class="form-group">
+            <label for="sourceScheme">Source System:</label>
+            <select id="sourceScheme">
+                <option value="IPA">IPA</option>
+                <option value="Yale">Yale</option>
+                <option value="ILE">ILE (Jyutping Hong Kong Institute of Education)</option>
+                <option value="Jyutping" selected>Jyutping</option>
+                <option value="Dunghoi">Dunghoi Jyutping</option>
+            </select>
+        </div>
+
+        <button class="swap" id="swapBtn" title="Swap source and target">⇄</button>
+
+        <div class="form-group">
+            <label for="targetScheme">Target System:</label>
+            <select id="targetScheme">
+                <option value="IPA">IPA</option>
+                <option value="Yale">Yale</option>
+                <option value="ILE">ILE</option>
+                <option value="Jyutping">Jyutping</option>
+                <option value="Dunghoi" selected>Dunghoi Jyutping</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 16px;">
+        <label for="inputText">Input Syllables / Words:</label>
+        <textarea id="inputText" placeholder="Type or paste text here (e.g., dung1 hoi2 jyu5, gwong2 dung1 waa2)..."></textarea>
+    </div>
+
+    <button id="transcribeBtn">Transcribe</button>
+
+    <div class="form-group" style="margin-top: 20px;">
+        <label>Result:</label>
+        <div id="outputText" class="output-box"></div>
+        <div id="warnings" class="warnings"></div>
+    </div>
+</div>
+
+<!-- Tone guide -->
+<div class="card">
+    <h2>📖 Dunghoiese Tone Conversion Guide</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Attribute</th>
+                    <th colspan="3">Dark 陰</th>
+                    <th colspan="3">Light 陽</th>
+                    <th colspan="3">Checked 入聲</th>
+                </tr>
+                <tr>
+                    <th>Tone no.</th>
+                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Chao contour</strong></td><td>53, 55</td><td>35</td><td>33</td><td>21, 11</td><td>24, 13</td><td>22</td><td>5</td><td>3</td><td>2</td></tr>
+                <tr><td><strong>IPA tone letters</strong></td><td>˥˧, ˥</td><td>˧˥</td><td>˧</td><td>˨˩, ˩</td><td>˨˦, ˩˧</td><td>˨</td><td>˥</td><td>˧</td><td>˨</td></tr>
+                <tr><td><strong>Yale</strong></td><td>à</td><td>á</td><td>a</td><td>àh</td><td>áh</td><td>ah</td><td>āk</td><td>ak</td><td>ahk</td></tr>
+                <tr><td><strong>ILE</strong></td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+                <tr><td><strong>Jyutping</strong></td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>1</td><td>3</td><td>6</td></tr>
+                <tr><td><strong>Dunghoi Jyutping</strong></td><td>a</td><td>á</td><td>à</td><td>ā</td><td>ǎ</td><td>â</td><td>a</td><td>å</td><td>ā</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="note">
+        Checked tones (7–9) are the tones of syllables ending in a stop (-p, -t, -k). Jyutping writes them with 1, 3, 6, and Dunghoi Jyutping reuses
+        the unmarked <em>a</em> (tone 7 = tone 1) and macron (tone 9 = tone 4); in those cases the coda decides which tone is meant.
+        Yale marks low tones with an <em>h</em> after the vowel (before any -m/-n/-ng/-p/-t/-k coda).
+    </p>
+</div>
+
+<!-- Initials -->
+<div class="card">
+    <h2>🔡 Initial Consonants</h2>
+    <div class="table-container"><table id="initialsTable"></table></div>
+    <p class="note">Highlighted cells differ between the systems. Q, R, V and X are not used in any of them.</p>
+</div>
+
+<!-- Finals -->
+<div class="card">
+    <h2>🔠 Finals</h2>
+    <div class="table-container scroll-y"><table id="finalsTable"></table></div>
+    <p class="note">
+        — means the system has no standard spelling for that final (Yale has none for /ɛːu, ɛːm, ɛːp, œːt/; ILE has none for /œːt/). When converting into such a system,
+        the Jyutping spelling is used and a warning is shown.
+        Dunghoi Jyutping spells both /œː/ and /ɛːu/ as <em>eu</em>; when reading Dunghoi Jyutping, <em>eu</em> is taken to be /œː/.
+        Syllables written <em>jyu, jyun, jyut</em> (Jyutping / ILE / Dunghoi) are the same as zero-initial <em>yu, yun, yut</em>.
+    </p>
+</div>
+
+<script>
+    // === Data ===
+    // Each entry: ipa forms (first = canonical, others are accepted alternatives when IPA is the
+    // SOURCE), then the spelling in Yale, ILE, Jyutping and Dunghoi Jyutping (null = no standard form).
+    function mk(ipa, yale, ile, jp, dh, extra) {
+        const forms = ipa.split('|').map(f => f.normalize('NFC'));
+        return Object.assign({ ipaForms: forms, ipa: forms[0], yale, ile, jp, dh }, extra || {});
+    }
+
+    const INITIALS = [
+        mk('p',   'b',  'b',  'b', 'b'),
+        mk('pʰ|ph', 'p', 'p', 'p', 'p'),
+        mk('m',   'm',  'm',  'm', 'm'),
+        mk('f',   'f',  'f',  'f', 'f'),
+        mk('t',   'd',  'd',  'd', 'd'),
+        mk('tʰ|th', 't', 't', 't', 't'),
+        mk('n',   'n',  'n',  'n', 'n'),
+        mk('l',   'l',  'l',  'l', 'l'),
+        mk('ts',  'j',  'dz', 'z', 'z'),
+        mk('tsʰ|tsh', 'ch', 'ts', 'c', 'ch'),
+        mk('s',   's',  's',  's', 's'),
+        mk('k',   'g',  'g',  'g', 'g'),
+        mk('kʰ|kh', 'k', 'k', 'k', 'k'),
+        mk('ŋ',   'ng', 'ng', 'ng', 'ng'),
+        mk('kʷ|kw', 'gw', 'gw', 'gw', 'gw'),
+        mk('kʷʰ|kwʰ|kwh', 'kw', 'kw', 'kw', 'kw'),
+        mk('h',   'h',  'h',  'h', 'h'),
+        mk('j',   'y',  'j',  'j', 'j', { isJ: true }),
+        mk('w',   'w',  'w',  'w', 'w'),
+    ];
+
+    // flags: stop = ends in -p/-t/-k (checked tones), y = front rounded /yː/ family (the j- initial
+    // is absorbed), syl = syllabic nasal, prefer = schemes in which this entry wins when two finals
+    // share one spelling.
+    const FINALS = [
+        // /aː/
+        mk('aː',  'a',    'aa',   'aa',   'aa'),
+        mk('aːi', 'aai',  'aai',  'aai',  'aai'),
+        mk('aːu', 'aau',  'aau',  'aau',  'aau'),
+        mk('aːm', 'aam',  'aam',  'aam',  'aam'),
+        mk('aːn', 'aan',  'aan',  'aan',  'aan'),
+        mk('aːŋ', 'aang', 'aang', 'aang', 'aang'),
+        mk('aːp', 'aap',  'aap',  'aap',  'aap',  { stop: true }),
+        mk('aːt', 'aat',  'aat',  'aat',  'aat',  { stop: true }),
+        mk('aːk', 'aak',  'aak',  'aak',  'aak',  { stop: true }),
+        // /ɐ/
+        mk('ɐ',   'a',    'aa',   'a',    'a'),
+        mk('ɐi',  'ai',   'ai',   'ai',   'ai'),
+        mk('ɐu',  'au',   'au',   'au',   'au'),
+        mk('ɐm',  'am',   'am',   'am',   'am'),
+        mk('ɐn',  'an',   'an',   'an',   'an'),
+        mk('ɐŋ',  'ang',  'ang',  'ang',  'ang'),
+        mk('ɐp',  'ap',   'ap',   'ap',   'ap',   { stop: true }),
+        mk('ɐt',  'at',   'at',   'at',   'at',   { stop: true }),
+        mk('ɐk',  'ak',   'ak',   'ak',   'ak',   { stop: true }),
+        // /ɛː/, /e/
+        mk('ɛː',  'e',    'e',    'e',    'e'),
+        mk('ei',  'ei',   'ei',   'ei',   'ei'),
+        mk('ɛːu', null,   'eu',   'eu',   'eu'),
+        mk('ɛːm', null,   'em',   'em',   'em'),
+        mk('ɛːŋ', 'eng',  'eng',  'eng',  'eng'),
+        mk('ɛːp', null,   'ep',   'ep',   'ep',   { stop: true }),
+        mk('ɛːk', 'ek',   'ek',   'ek',   'ek',   { stop: true }),
+        // /iː/, /ɪ/
+        mk('iː',  'i',    'i',    'i',    'i'),
+        mk('iːu', 'iu',   'iu',   'iu',   'iu'),
+        mk('iːm', 'im',   'im',   'im',   'im'),
+        mk('iːn', 'in',   'in',   'in',   'in'),
+        mk('ɪŋ',  'ing',  'ing',  'ing',  'ing'),
+        mk('iːp', 'ip',   'ip',   'ip',   'ip',   { stop: true }),
+        mk('iːt', 'it',   'it',   'it',   'it',   { stop: true }),
+        mk('ɪk',  'ik',   'ik',   'ik',   'ik',   { stop: true }),
+        // /ɔː/, /o/
+        mk('ɔː',  'o',    'o',    'o',    'o'),
+        mk('ɔːi', 'oi',   'oi',   'oi',   'oi'),
+        mk('ou',  'ou',   'ou',   'ou',   'ou'),
+        mk('ɔːn', 'on',   'on',   'on',   'on'),
+        mk('ɔːŋ', 'ong',  'ong',  'ong',  'ong'),
+        mk('ɔːt', 'ot',   'ot',   'ot',   'ot',   { stop: true }),
+        mk('ɔːk', 'ok',   'ok',   'ok',   'ok',   { stop: true }),
+        // /uː/, /ʊ/
+        mk('uː',  'u',    'u',    'u',    'u'),
+        mk('uːi', 'ui',   'ui',   'ui',   'ui'),
+        mk('uːn', 'un',   'un',   'un',   'un'),
+        mk('ʊŋ',  'ung',  'ung',  'ung',  'ung'),
+        mk('uːt', 'ut',   'ut',   'ut',   'ut',   { stop: true }),
+        mk('ʊk',  'uk',   'uk',   'uk',   'uk',   { stop: true }),
+        // /œː/
+        mk('œː',  'eu',   'oe',   'oe',   'eu',   { prefer: ['dh'] }),
+        mk('œːŋ', 'eung', 'oeng', 'oeng', 'eung'),
+        mk('œːt', null,   null,   'oet',  'eut',  { stop: true }),
+        mk('œːk', 'euk',  'oek',  'oek',  'euk',  { stop: true }),
+        // /ɵ/
+        mk('ɵy',  'eui',  'oey',  'eoi',  'eoi'),
+        mk('ɵn',  'eun',  'oen',  'eon',  'eon'),
+        mk('ɵt',  'eut',  'oet',  'eot',  'eot',  { stop: true }),
+        // /yː/
+        mk('yː',  'yu',   'y',    'yu',   'yu',   { y: true }),
+        mk('yːn', 'yun',  'yn',   'yun',  'yun',  { y: true }),
+        mk('yːt', 'yut',  'yt',   'yut',  'yut',  { y: true, stop: true }),
+        // syllabic consonants
+        mk('m̩|m', 'm',   'm',    'm',    'm',    { syl: true }),
+        mk('ŋ̍|ŋ', 'ng',  'ng',   'ng',   'ng',   { syl: true }),
+    ];
+
+    const SCHEME_KEY = { IPA: 'ipa', Yale: 'yale', ILE: 'ile', Jyutping: 'jp', Dunghoi: 'dh' };
+    const SCHEME_NAME = { IPA: 'IPA', Yale: 'Yale', ILE: 'ILE', Jyutping: 'Jyutping', Dunghoi: 'Dunghoi Jyutping' };
+
+    // === Lookup tables ===
+    function formsOf(entry, key) {
+        if (key === 'ipa') return entry.ipaForms;
+        return entry[key] == null ? [] : [entry[key].normalize('NFC')];
+    }
+
+    function buildInitialList(key) {
+        const list = [];
+        INITIALS.forEach(e => formsOf(e, key).forEach(form => list.push({ form, entry: e })));
+        return list.sort((a, b) => b.form.length - a.form.length);
+    }
+
+    function buildFinalMap(key) {
+        const map = new Map();
+        FINALS.forEach(e => formsOf(e, key).forEach(form => {
+            if (!map.has(form) || (e.prefer && e.prefer.includes(key))) map.set(form, e);
+        }));
+        return map;
+    }
+
+    const initialLists = {}, finalMaps = {};
+    Object.values(SCHEME_KEY).forEach(k => { initialLists[k] = buildInitialList(k); finalMaps[k] = buildFinalMap(k); });
+
+    // === Tone tables ===
+    const TONE_IPA = { 1: '˥˧', 2: '˧˥', 3: '˧', 4: '˨˩', 5: '˨˦', 6: '˨', 7: '˥', 8: '˧', 9: '˨' };
+    const IPA_TONE_NONSTOP = { '˥˧': 1, '˥': 1, '˧˥': 2, '˧': 3, '˨˩': 4, '˩': 4, '˨˦': 5, '˩˧': 5, '˨': 6 };
+    const IPA_TONE_STOP = { '˥': 7, '˧': 8, '˨': 9 };
+    // Yale: diacritic + whether the low-tone 'h' is inserted
+    const YALE_TONE = {
+        1: { m: '\u0300', h: false }, 2: { m: '\u0301', h: false }, 3: { m: '', h: false },
+        4: { m: '\u0300', h: true },  5: { m: '\u0301', h: true },  6: { m: '', h: true },
+        7: { m: '\u0304', h: false }, 8: { m: '', h: false },       9: { m: '', h: true },
+    };
+    const DH_TONE = { 1: '', 2: '\u0301', 3: '\u0300', 4: '\u0304', 5: '\u030C', 6: '\u0302', 7: '', 8: '\u030A', 9: '\u0304' };
+
+    // === Helpers ===
+    function stripDelimiters(str) {
+        return str.replace(/^[\/\[]/, '').replace(/[\/\]]$/, '');
+    }
+
+    function detectCasing(token) {
+        const hasUpper = /[A-Z]/.test(token), hasLower = /[a-z]/.test(token);
+        if (hasUpper && !hasLower) return 'upper';
+        const first = token.match(/[A-Za-z]/);
+        if (first && /[A-Z]/.test(first[0])) return 'title';
+        return 'lower';
+    }
+
+    function applyCasing(str, casing) {
+        if (casing === 'upper') return str.toUpperCase();
+        if (casing === 'title' && str.length) return str.charAt(0).toUpperCase() + str.slice(1);
+        return str;
+    }
+
+    // Yale writes low tones with an 'h' straight after the vowel (before any coda).
+    function stripYaleH(s) {
+        for (let i = s.length - 1; i > 0; i--) {
+            if (s[i] !== 'h') continue;
+            const before = s.slice(0, i), rest = s.slice(i + 1);
+            if (/^(ng|m|n|p|t|k)?$/.test(rest) && (/[aeiouy]$/.test(before) || before === 'm' || before === 'ng')) {
+                return { s: before + rest, low: true };
+            }
+        }
+        return { s, low: false };
+    }
+
+    // Split a lowercase/IPA skeleton into initial + final. Returns null if it can't be parsed.
+    function parseCore(s, key) {
+        const fmap = finalMaps[key];
+        const whole = fmap.get(s);
+        if (whole) return { ini: null, fin: whole, rest: s };
+        for (const { form, entry } of initialLists[key]) {
+            if (s.startsWith(form)) {
+                const rest = s.slice(form.length);
+                const fin = fmap.get(rest);
+                if (fin) return { ini: entry, fin, rest };
+            }
+        }
+        return null;
+    }
+
+    // === Parsing (source -> {ini, fin, tone}) ===
+    function parseSyllable(token, src, warnings) {
+        const key = SCHEME_KEY[src];
+        const casing = src === 'IPA' ? 'lower' : detectCasing(token);
+        let s = stripDelimiters(token).replace(/:/g, 'ː');
+
+        let digit = null, letters = null;
+        const marks = new Set();
+        let yaleLow = false;
+
+        const dm = s.match(/\d$/);
+        if (dm) {
+            digit = parseInt(dm[0], 10);
+            s = s.slice(0, -1);
+        }
+
+        if (src === 'IPA') {
+            s = s.normalize('NFC');
+            if (digit === null) {
+                const tm = s.match(/[˥˦˧˨˩]+$/);
+                if (tm) { letters = tm[0]; s = s.slice(0, -letters.length); }
+            }
+        } else {
+            s = s.toLowerCase().normalize('NFD');
+            if (digit === null) {
+                for (const m of s.matchAll(/[\u0300-\u036f]/g)) marks.add(m[0]);
+            }
+            s = s.replace(/[\u0300-\u036f]/g, '').normalize('NFC');
+            if (src === 'Yale' && digit === null) {
+                const r = stripYaleH(s);
+                s = r.s; yaleLow = r.low;
+            }
+        }
+
+        const core = parseCore(s, key);
+        if (!core) return null;
+        let { ini, fin } = core;
+
+        if (src === 'Dunghoi' && fin.ipa === 'œː' && core.rest === 'eu') {
+            warnings.add('Dunghoi Jyutping “eu” is read as /œː/ (it could also stand for /ɛːu/).');
+        }
+
+        // j + yu... is just yu... (the glide is absorbed)
+        if (ini && ini.isJ && fin.y) ini = null;
+
+        const stop = !!fin.stop;
+        let tone = null;
+        if (digit !== null) {
+            tone = digit;
+            if (src === 'Jyutping' && stop && [1, 3, 6].includes(digit)) tone = { 1: 7, 3: 8, 6: 9 }[digit];
+        } else if (src === 'IPA') {
+            if (letters) {
+                tone = (stop && IPA_TONE_STOP[letters]) || IPA_TONE_NONSTOP[letters] || null;
+            }
+        } else if (src === 'Yale') {
+            if (marks.has('\u0304')) tone = 7;
+            else if (marks.has('\u0300')) tone = yaleLow ? 4 : 1;
+            else if (marks.has('\u0301')) tone = yaleLow ? 5 : 2;
+            else if (stop) tone = yaleLow ? 9 : 8;
+            else tone = yaleLow ? 6 : 3;
+        } else if (src === 'Dunghoi') {
+            if (marks.has('\u0301')) tone = 2;
+            else if (marks.has('\u0300')) tone = 3;
+            else if (marks.has('\u030C')) tone = 5;
+            else if (marks.has('\u0302')) tone = 6;
+            else if (marks.has('\u030A')) tone = 8;
+            else if (marks.has('\u0304')) tone = stop ? 9 : 4;
+            else tone = stop ? 7 : 1;
+        }
+        return { ini, fin, tone, casing };
+    }
+
+    // === Writing ({ini, fin, tone} -> target) ===
+    function insertAt(str, idx, mark) {
+        return str.slice(0, idx + 1) + mark + str.slice(idx + 1);
+    }
+
+    function yaleFinal(fin, tone, syl) {
+        const t = YALE_TONE[tone];
+        if (!t) return fin;
+        let f = fin;
+        if (t.h) {
+            if (syl) f += 'h';
+            else {
+                const m = f.match(/^(.*?)(ng|m|n|p|t|k)?$/);
+                f = m[1] + 'h' + (m[2] || '');
+            }
+        }
+        if (t.m) {
+            let idx;
+            if (syl) idx = 0;
+            else if (f[0] === 'y') idx = 1;               // yu, yun, yut: mark the u
+            else idx = f.search(/[aeiou]/);
+            if (idx >= 0) f = insertAt(f, idx, t.m);
+        }
+        return f;
+    }
+
+    // Dunghoi Jyutping: Pinyin-style placement (a > e > o; iu -> u, ui -> i; otherwise the i/u/y vowel).
+    function dunghoiFinal(fin, tone, syl) {
+        const mark = DH_TONE[tone];
+        if (!mark) return fin;
+        let idx;
+        if (syl) idx = 0;
+        else if (fin.includes('a')) idx = fin.indexOf('a');
+        else if (fin.includes('e')) idx = fin.indexOf('e');
+        else if (fin.includes('o')) idx = fin.indexOf('o');
+        else if (/^(iu|ui|y)/.test(fin)) idx = 1;
+        else idx = fin.search(/[iu]/);
+        return idx >= 0 ? insertAt(fin, idx, mark) : fin;
+    }
+
+    function writeSyllable(p, tgt, warnings) {
+        const key = SCHEME_KEY[tgt];
+        const { ini, fin, tone } = p;
+
+        let iniStr = ini ? ini[key] : '';
+        if (!ini && fin.y && tgt !== 'IPA' && tgt !== 'Yale') iniStr = 'j';
+
+        let finStr = fin[key];
+        if (finStr == null) {
+            finStr = fin.jp;
+            warnings.add(`${SCHEME_NAME[tgt]} has no standard spelling for /${fin.ipa}/; the Jyutping spelling “${fin.jp}” was used.`);
+        }
+
+        let out;
+        if (tgt === 'IPA') {
+            out = iniStr + finStr + (tone ? TONE_IPA[tone] || '' : '');
+            return '/' + out.normalize('NFC') + '/';
+        }
+        if (tgt === 'ILE') {
+            out = iniStr + finStr + (tone || '');
+        } else if (tgt === 'Jyutping') {
+            out = iniStr + finStr + (tone ? ({ 7: 1, 8: 3, 9: 6 }[tone] || tone) : '');
+        } else if (tgt === 'Yale') {
+            out = iniStr + (tone ? yaleFinal(finStr, tone, fin.syl) : finStr);
+        } else { // Dunghoi
+            out = iniStr + (tone ? dunghoiFinal(finStr, tone, fin.syl) : finStr);
+        }
+        return out.normalize('NFC');
+    }
+
+    function processSyllable(token, src, tgt, warnings) {
+        if (!token.trim()) return token;
+        if (src === tgt) return token;
+        const p = parseSyllable(token, src, warnings);
+        if (!p) {
+            warnings.add(`Couldn’t read “${token}” as ${SCHEME_NAME[src]}; left unchanged.`);
+            return token;
+        }
+        const out = writeSyllable(p, tgt, warnings);
+        return tgt === 'IPA' ? out : applyCasing(out, p.casing);
+    }
+
+    function transcribe(text, src, tgt, warnings) {
+        return text.split(/(\s+|[,.\-;!?])/).map(tok => {
+            if (tok === '' || /^\s+$/.test(tok) || /^[,.\-;!?]$/.test(tok)) return tok;
+            return processSyllable(tok, src, tgt, warnings);
+        }).join('');
+    }
+
+    // === UI ===
+    const $ = id => document.getElementById(id);
+
+    function run() {
+        const warnings = new Set();
+        $('outputText').innerText = transcribe($('inputText').value, $('sourceScheme').value, $('targetScheme').value, warnings);
+        const box = $('warnings');
+        if (warnings.size) {
+            box.innerHTML = '<ul>' + [...warnings].map(w => '<li>' + w.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    $('transcribeBtn').addEventListener('click', run);
+    $('inputText').addEventListener('input', run);
+    $('sourceScheme').addEventListener('change', run);
+    $('targetScheme').addEventListener('change', run);
+    $('swapBtn').addEventListener('click', () => {
+        const a = $('sourceScheme'), b = $('targetScheme');
+        [a.value, b.value] = [b.value, a.value];
+        const out = $('outputText').innerText;
+        if (out.trim()) $('inputText').value = out;
+        run();
+    });
+
+    // === Reference tables ===
+    (function renderTables() {
+        const keys = ['ipa', 'yale', 'ile', 'jp', 'dh'];
+        const names = ['IPA', 'Yale', 'ILE', 'Jyutping', 'Dunghoi Jyutping'];
+
+        // Initials (systems as rows, like the source table)
+        const it = $('initialsTable');
+        let html = '<thead><tr><th>System</th>' + INITIALS.map(e => `<th>${e.ipa}</th>`).join('') + '</tr></thead><tbody>';
+        keys.forEach((k, ki) => {
+            html += `<tr><td><strong>${names[ki]}</strong></td>`;
+            INITIALS.forEach(e => {
+                const diff = k !== 'ipa' && [e.yale, e.ile, e.jp, e.dh].some(v => v !== e[k]);
+                html += `<td class="${diff ? 'diff' : ''}">${e[k] == null ? '—' : (k === 'ipa' ? e.ipa : e[k])}</td>`;
+            });
+            html += '</tr>';
+        });
+        it.innerHTML = html + '</tbody>';
+
+        // Finals (one row per final)
+        const ft = $('finalsTable');
+        html = '<thead><tr><th>IPA</th><th>Yale</th><th>ILE</th><th>Jyutping</th><th>Dunghoi Jyutping</th></tr></thead><tbody>';
+        FINALS.forEach(e => {
+            html += '<tr><td>' + e.ipa + '</td>';
+            ['yale', 'ile', 'jp', 'dh'].forEach(k => {
+                const v = e[k];
+                const diff = v != null && ['yale', 'ile', 'jp', 'dh'].some(o => e[o] !== v);
+                html += v == null ? '<td class="na">—</td>' : `<td class="${diff ? 'diff' : ''}">${v}</td>`;
+            });
+            html += '</tr>';
+        });
+        ft.innerHTML = html + '</tbody>';
+    })();
+
+    run();
+</script>
+
+</body>
+</html>
